@@ -50,7 +50,7 @@ steps:
         - com.oracle.*     
       maxPermissibleCvssV2Score: 9.0                
       maxPermissibleCvssV3Score: 9.0                
-    knowledgeBaseId: ocid1.admknowledgebase.oc1.ap-sydney-1.amaaaaaadoggtjaajgdoxhthxjhjumjdja6cb7gu52wwcbf3e6dbydstrb7q   
+    knowledgeBaseId: ocid1.admknowledgebase.oc1.ap-sydney-1.amaaaaaadoggtjaa7p7nj3xfzla2ji6gql22fogfcmnikkbvftkgdezeex3q
     vulnerabilityAuditName: sockshop-vulnerability-audit
 
   - type: Command
@@ -64,7 +64,7 @@ steps:
     timeoutInSeconds: 6000
     command: |
       export TENANCY_NAMESPACE=`oci os ns get --query data --raw-output`
-      export REPO_NAME=$appName
+      export REPO_NAME=sockshop/$appName
       export OCIR_PATH=$OCI_RESOURCE_PRINCIPAL_REGION.ocir.io/$TENANCY_NAMESPACE/$REPO_NAME 
       mvn --no-transfer-progress -B package --file pom.xml -Pcontainer -DskipTests -Dcontainer.repo=$OCIR_PATH -Dcontainer.version=0.0.1
 

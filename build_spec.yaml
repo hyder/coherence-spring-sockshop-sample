@@ -1,115 +1,25 @@
-# Copyright (c) 2023, Oracle and/or its affiliates.
+# Copyright (c) 2022, Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # https://oss.oracle.com/licenses/upl.
 version: 0.1
 component: build
 timeoutInSeconds: 6000
 runAs: root
-shell: bash
-env:
-  variables:
-    JAVA_HOME : "/usr/lib64/graalvm/graalvm-java17"
-    appName: "sockshop"
-    MAVEN_CACHE_FOLDER: $HOME/.m2/repository
-    MAVEN_OPTS: "-Dmaven.wagon.http.pool=false -Dmaven.wagon.httpconnectionManager.ttlSeconds=120 -Dmaven.wagon.http.retryHandler.count=3"
-
-  exportedVariables:
-    - BUILDRUN_HASH
-    - APP_NAME
-    - OCIR_PATH
-    - TAG
-
+shell: bash   
 steps:
   - type: Command
-    name: "Export variables"
-    timeoutInSeconds: 40
-    command: |
-      export APP_NAME=$appName
-      export BUILDRUN_HASH=`echo ${OCI_BUILD_RUN_ID} | rev | cut -c 1-7`
-      export TAG=$BUILDRUN_HASH
-
-  - type: Command
-    name: "Install GraalVM for JDK 17"
-    timeoutInSeconds: 140
-    command: |
-       yum install -y -q graalvm-17-jdk
-    
-  - type: Command
-    name: "Set the PATH here. JAVA_HOME already set in env > variables above."
-    command: |
-      export PATH=$JAVA_HOME/bin:$PATH
-
-  - type: VulnerabilityAudit
-    name: "Vulnerability Audit Step"
-    configuration:
-      buildType: maven   
-      pomFilePath: ${OCI_PRIMARY_SOURCE_DIR}/pom.xml
-      packagesToIgnore:
-        - com.oracle.*     
-      maxPermissibleCvssV2Score: 9.0                
-      maxPermissibleCvssV3Score: 9.0                
-    knowledgeBaseId: ocid1.admknowledgebase.oc1.ap-sydney-1.amaaaaaadoggtjaa7p7nj3xfzla2ji6gql22fogfcmnikkbvftkgdezeex3q
-    vulnerabilityAuditName: sockshop-vulnerability-audit
-
-  - type: Command
-    name: "Build application"
+    name: "Update OAM YAML file"
     timeoutInSeconds: 6000
     command: |
-      mvn --no-transfer-progress -B install --file pom.xml -DskipTests
-
-  - type: Command
-    name: "Package container images"
-    timeoutInSeconds: 6000
-    command: |
-      export TENANCY_NAMESPACE=`oci os ns get --query data --raw-output`
-      export REPO_NAME=$appName
-      export OCIR_PATH=$OCI_RESOURCE_PRINCIPAL_REGION.ocir.io/$TENANCY_NAMESPACE/$REPO_NAME 
-      mvn --no-transfer-progress -B package --file pom.xml -Pcontainer -DskipTests -Dcontainer.repo=coherence-spring-sockshop -Dcontainer.version=0.0.1
-
-  - type: Command
-    name: "List container images"
-    timeoutInSeconds: 40
-    command: |
-      echo "
-      `docker images`
-      "
-outputArtifacts:
-  # - name: jar
-  #   type: BINARY
-  #   location: target/users-1.3.1-SNAPSHOT.jar
-  - name: output_shipping_image
-    type: DOCKER_IMAGE
-    # this is only the locally exported container image name
-    # this location tag doesn't effect the tag used to deliver the container image
-    # to the Container Registry.
-    location: coherence-spring-sockshop-shipping:0.0.1
-  - name: output_payment_image
-    type: DOCKER_IMAGE
-    # this is only the locally exported container image name
-    # this location tag doesn't effect the tag used to deliver the container image
-    # to the Container Registry.
-    location: coherence-spring-sockshop-payment:0.0.1
-  - name: output_orders_image
-    type: DOCKER_IMAGE
-    # this is only the locally exported container image name
-    # this location tag doesn't effect the tag used to deliver the container image
-    # to the Container Registry.
-    location: coherence-spring-sockshop-orders:0.0.1
-  - name: output_users_image
-    type: DOCKER_IMAGE
-    # this is only the locally exported container image name
-    # this location tag doesn't effect the tag used to deliver the container image
-    # to the Container Registry.
-    location: coherence-spring-sockshop-users:0.0.1  
-  - name: output_catalog_image
-    type: DOCKER_IMAGE
-    # this is only the locally exported container image name
-    # this location tag doesn't effect the tag used to deliver the container image
-    # to the Container Registry.
-    location: coherence-spring-sockshop-catalog:0.0.1
-  - name: output_carts_image
-    type: DOCKER_IMAGE
-    # this is only the locally exported container image name
-    # this location tag doesn't effect the tag used to deliver the container image
-    # to the Container Registry.
-    location: coherence-spring-sockshop-carts:0.0.1
+      cd ${OCI_PRIMARY_SOURCE_DIR}/k8s/application/oam/
+      echo $BUILDRUN_HASH
+      echo ${OCI_PIPELINE_ID}
+      envsubst < ${OCI_PRIMARY_SOURCE_DIR}/k8s/templates/spring-components-template.yaml > spring-components.yaml
+      git config user.email "${OCI_PIPELINE_ID}@example.com"; git config user.name "${OCI_PIPELINE_ID}"; git add . 
+      git commit -m "Build ${BUILDRUN_HASH}"
+      echo "changes committed"
+      echo "user.email ${OCI_PIPELINE_ID}@example.com"
+      echo "user.name ${OCI_PIPELINE_ID}"
+      git push origin deploy
+      echo "git pushed"
+      #exit 1

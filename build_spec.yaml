@@ -1,18 +1,78 @@
-# Copyright (c) 2022, Oracle and/or its affiliates.
+# Copyright (c) 2023, Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # https://oss.oracle.com/licenses/upl.
-
 version: 0.1
 component: build
-timeoutInSeconds: 1000
+timeoutInSeconds: 6000
+runAs: root
 shell: bash
+env:
+  variables:
+    JAVA_HOME : "/usr/lib64/graalvm/graalvm-java17"
+    appName: "sockshop"
+    MAVEN_CACHE_FOLDER: $HOME/.m2/repository
+    MAVEN_OPTS: "-Dmaven.wagon.http.pool=false -Dmaven.wagon.httpconnectionManager.ttlSeconds=120 -Dmaven.wagon.http.retryHandler.count=3"
+
+  exportedVariables:
+    - BUILDRUN_HASH
+    - APP_NAME
+    - OCIR_PATH
+    - TAG
 
 steps:
   - type: Command
-    name: "compress the repo"
+    name: "Export variables"
+    timeoutInSeconds: 40
     command: |
-      tar -cvzf ${OCI_WORKSPACE_DIR}/repo.tgz ./
-outputArtifacts:
-  - name: artifact
-    type: BINARY
-    location: ${OCI_WORKSPACE_DIR}/repo.tgz
+      export APP_NAME=$appName
+      export JAVA_HOME=$JAVA_HOME
+      export BUILDRUN_HASH=`echo ${OCI_BUILD_RUN_ID} | rev | cut -c 1-7`
+      export MAVEN_CACHE_FOLDER=$MAVEN_CACHE_FOLDER
+      export MAVEN_OPTS=$MAVEN_OPTS
+
+  - type: Command
+    name: "Install GraalVM for JDK 17"
+    timeoutInSeconds: 140
+    command: |
+       yum install -y -q graalvm-17-jdk
+    
+  - type: Command
+    name: "Set the PATH here. JAVA_HOME already set in env > variables above."
+    command: |
+      export PATH=$JAVA_HOME/bin:$PATH
+
+  - type: VulnerabilityAudit
+    name: "Vulnerability Audit Step"
+    configuration:
+      buildType: maven   
+      pomFilePath: ${OCI_PRIMARY_SOURCE_DIR}/pom.xml
+      packagesToIgnore:
+        - com.oracle.*     
+      maxPermissibleCvssV2Score: 9.0                
+      maxPermissibleCvssV3Score: 9.0                
+    knowledgeBaseId: ocid1.admknowledgebase.oc1.ap-sydney-1.amaaaaaadoggtjaajgdoxhthxjhjumjdja6cb7gu52wwcbf3e6dbydstrb7q   
+    vulnerabilityAuditName: sockshop-vulnerability-audit
+
+  - type: Command
+    name: "Build application"
+    timeoutInSeconds: 6000
+    command: |
+      mvn --no-transfer-progress -B install --file pom.xml -DskipTests
+
+  - type: Command
+    name: "Package container images"
+    timeoutInSeconds: 6000
+    command: |
+      export TENANCY_NAMESPACE=`oci os ns get --query data --raw-output`
+      export REPO_NAME=$appName
+      export OCIR_PATH=$OCI_RESOURCE_PRINCIPAL_REGION.ocir.io/$TENANCY_NAMESPACE/$REPO_NAME 
+      mvn --no-transfer-progress -B package --file pom.xml -Pcontainer -DskipTests -Dcontainer.repo=$OCIR_PATH -Dcontainer.version=0.0.1
+
+  - type: Command
+    name: "List container images"
+    timeoutInSeconds: 40
+    command: |
+      set -ex 
+      echo "
+      `docker images`
+      "

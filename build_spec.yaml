@@ -66,7 +66,7 @@ steps:
       export TENANCY_NAMESPACE=`oci os ns get --query data --raw-output`
       export REPO_NAME=$appName
       export OCIR_PATH=$OCI_RESOURCE_PRINCIPAL_REGION.ocir.io/$TENANCY_NAMESPACE/$REPO_NAME 
-      mvn --no-transfer-progress -B package --file pom.xml -Pcontainer -DskipTests -Dcontainer.repo=$OCIR_PATH -Dcontainer.version=0.0.1
+      mvn --no-transfer-progress -B package --file pom.xml -Pcontainer -DskipTests -Dcontainer.repo=$OCIR_PATH/coherence-spring-sockshop -Dcontainer.version=0.0.1
 
   - type: Command
     name: "List container images"
@@ -75,3 +75,43 @@ steps:
       echo "
       `docker images`
       "
+outputArtifacts:
+  # - name: jar
+  #   type: BINARY
+  #   location: target/users-1.3.1-SNAPSHOT.jar
+  - name: output_shipping_image
+    type: DOCKER_IMAGE
+    # this is only the locally exported container image name
+    # this location tag doesn't effect the tag used to deliver the container image
+    # to the Container Registry.
+    location: $OCIR_PATH/coherence-spring-sockshop-shipping:0.0.1
+  - name: output_payment_image
+    type: DOCKER_IMAGE
+    # this is only the locally exported container image name
+    # this location tag doesn't effect the tag used to deliver the container image
+    # to the Container Registry.
+    location:$OCIR_PATH/coherence-spring-sockshop-payment:0.0.1
+  - name: output_orders_image
+    type: DOCKER_IMAGE
+    # this is only the locally exported container image name
+    # this location tag doesn't effect the tag used to deliver the container image
+    # to the Container Registry.
+    location:$OCIR_PATH/coherence-spring-sockshop-orders:0.0.1
+  - name: output_users_image
+    type: DOCKER_IMAGE
+    # this is only the locally exported container image name
+    # this location tag doesn't effect the tag used to deliver the container image
+    # to the Container Registry.
+    location:$OCIR_PATH/coherence-spring-sockshop-users:0.0.1  
+  - name: output_catalog_image
+    type: DOCKER_IMAGE
+    # this is only the locally exported container image name
+    # this location tag doesn't effect the tag used to deliver the container image
+    # to the Container Registry.
+    location:$OCIR_PATH/coherence-spring-sockshop-catalog:0.0.1
+  - name: output_carts_image
+    type: DOCKER_IMAGE
+    # this is only the locally exported container image name
+    # this location tag doesn't effect the tag used to deliver the container image
+    # to the Container Registry.
+    location:$OCIR_PATH/coherence-spring-sockshop-carts:0.0.1

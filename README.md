@@ -1,4 +1,4 @@
-# Coherence Spring Sock Shop
+# Coherence Spring Sock Shop - Julian 
 
 This project is an implementation of a stateful, microservices based application that
 uses [Oracle Coherence CE](https://coherence.community/) as a scalable embedded data

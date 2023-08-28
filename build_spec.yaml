@@ -64,7 +64,7 @@ steps:
     timeoutInSeconds: 6000
     command: |
       export TENANCY_NAMESPACE=`oci os ns get --query data --raw-output`
-      export REPO_NAME=sockshop/$appName
+      export REPO_NAME=$appName
       export OCIR_PATH=$OCI_RESOURCE_PRINCIPAL_REGION.ocir.io/$TENANCY_NAMESPACE/$REPO_NAME 
       mvn --no-transfer-progress -B package --file pom.xml -Pcontainer -DskipTests -Dcontainer.repo=$OCIR_PATH -Dcontainer.version=0.0.1
 
@@ -72,7 +72,6 @@ steps:
     name: "List container images"
     timeoutInSeconds: 40
     command: |
-      set -ex 
       echo "
       `docker images`
       "
